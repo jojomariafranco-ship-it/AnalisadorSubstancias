@@ -28,6 +28,7 @@ def limpar_item_excel(texto):
 # =========================
 # DOCX
 # =========================
+@st.cache_data
 def ler_docx(file):
     doc = Document(file)
     titulos = []
@@ -44,8 +45,9 @@ def ler_docx(file):
 # =========================
 # EXCEL
 # =========================
+@st.cache_data
 def analisar_excel(file, substancias):
-    wb = load_workbook(file)
+    wb = load_workbook(file, read_only=True, data_only=True)
     sheets = wb.worksheets[:2]
 
     substancias_norm = {normalizar(s): s for s in substancias}
@@ -61,7 +63,10 @@ def analisar_excel(file, substancias):
             if len(row_clean) > 1:
                 row_clean[1] = limpar_item_excel(row_clean[1])
 
-            row_norm = {normalizar(cell) for cell in row_clean if cell}
+            row_set = set()
+            for cell in row:
+                if cell:
+                    row_set.add(normalizar(cell))
 
             if len(row) < 7:
                 continue

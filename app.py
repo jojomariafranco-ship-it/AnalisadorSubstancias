@@ -110,8 +110,3 @@ if docx_file and xlsx_file:
         for substancia, areas in resultado:
             st.write(f"**{substancia}** → {', '.join(areas)}")
 
-if __name__ == "__main__":
-    import streamlit.web.cli as stcli
-    import sys
-    sys.argv = ["streamlit", "run", "app.py", "--server.port=10000"]
-    sys.exit(stcli.main())

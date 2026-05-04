@@ -31,15 +31,11 @@ def limpar_item_excel(texto):
 @st.cache_data
 def ler_docx(file):
     doc = Document(file)
-    titulos = []
-
-    for tabela in doc.tables:
-        for row in tabela.rows:
-            texto = row.cells[0].text.strip()
-            if texto:
-                titulos.append(texto)
-
-    return titulos
+    return [
+        row.cells[0].text.strip()
+        for row in doc.tables[0].rows
+        if row.cells[0].text.strip()
+    ]
 
 
 # =========================
@@ -58,16 +54,6 @@ def analisar_excel(file, substancias):
             if not row:
                 continue
 
-            row_clean = list(row)
-
-            if len(row_clean) > 1:
-                row_clean[1] = limpar_item_excel(row_clean[1])
-
-            row_set = set()
-            for cell in row:
-                if cell:
-                    row_set.add(normalizar(cell))
-
             if len(row) < 7:
                 continue
 
@@ -77,16 +63,25 @@ def analisar_excel(file, substancias):
 
             area = str(area).strip()
 
+            # construir set da linha (MATCH RÁPIDO E EXACTO)
+            row_set = set()
+
+            for cell in row:
+                if cell:
+                    row_set.add(normalizar(cell))
+
+            # matching exato
             for norm_sub, original_sub in substancias_norm.items():
-                if norm_sub in row_norm:
+                if norm_sub in row_set:
                     resultado[original_sub].add(area)
 
     output = [
-        (s, sorted(list(a)))
+        (s, sorted(a))
         for s, a in resultado.items()
         if a
     ]
 
+    wb.close()
     return output
 
 
@@ -95,22 +90,24 @@ def analisar_excel(file, substancias):
 # =========================
 st.title("🔬 Analisador de Substâncias")
 
-st.write("Faz upload do ficheiro DOCX e XLSX")
-
-docx_file = st.file_uploader("DOCX (substâncias)", type=["docx"])
-xlsx_file = st.file_uploader("XLSX (consumos)", type=["xlsx"])
+docx_file = st.file_uploader("DOCX", type=["docx"])
+xlsx_file = st.file_uploader("XLSX", type=["xlsx"])
 
 if docx_file and xlsx_file:
+
     if st.button("Analisar"):
 
-        with st.spinner("A analisar ficheiros..."):
+        st.info("A processar DOCX...")
+        substancias = ler_docx(docx_file)
 
-            substancias = ler_docx(docx_file)
+        st.info(f"Substâncias: {len(substancias)}")
+
+        st.info("A analisar Excel...")
+
+        with st.spinner("Processando..."):
             resultado = analisar_excel(xlsx_file, substancias)
 
-        st.success("Análise concluída!")
-
-        st.write("## Resultado")
+        st.success("Concluído!")
 
         for substancia, areas in resultado:
             st.write(f"**{substancia}** → {', '.join(areas)}")
